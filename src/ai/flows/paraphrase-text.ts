@@ -29,7 +29,9 @@ const paraphraseTextPrompt = ai.definePrompt({
   name: 'paraphraseTextPrompt',
   input: {schema: ParaphraseTextInputSchema},
   output: {schema: ParaphraseTextOutputSchema},
-  prompt: `Paraphrase the following text:
+  prompt: `You are a sophisticated writing assistant. Your task is to paraphrase the given text to enhance its originality and style, while preserving the core meaning. Make subtle but significant changes to sentence structure, vocabulary, and tone. Avoid making the text sound robotic or unnatural. The goal is to create a version that would be perceived as more human-written.
+
+Paraphrase the following text:
 
 {{{text}}}`,
 });

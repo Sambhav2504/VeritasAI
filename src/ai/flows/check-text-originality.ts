@@ -14,7 +14,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {cosineSimilarity} from '@/lib/similarity';
 
 const CheckTextOriginalityInputSchema = z.object({
   text: z
@@ -37,24 +36,20 @@ export async function checkTextOriginality(input: CheckTextOriginalityInput): Pr
   return checkTextOriginalityFlow(input);
 }
 
-// This function now uses a proper embedding model.
-async function embedText(text: string): Promise<number[] | null> {
-  try {
-    const result = await ai.embed({
-      model: 'googleai/text-embedding-004',
-      content: text,
-    });
-    if (!result?.embedding) {
-      console.error('Failed to get embedding for text. This can be caused by a missing API key or a service issue.');
-      return null;
-    }
-    return result.embedding;
-  } catch (e) {
-    console.error("Error during embedding:", e);
-    return null;
-  }
-}
+const checkOriginalityPrompt = ai.definePrompt({
+  name: 'checkOriginalityPrompt',
+  input: { schema: CheckTextOriginalityInputSchema },
+  output: { schema: CheckTextOriginalityOutputSchema },
+  prompt: `You are an expert in detecting AI-generated text. Analyze the following text and determine the probability that it was written by an AI.
+  
+Provide your answer as a percentage from 0 to 100, where 0% means it is definitely human-written and 100% means it is definitely AI-generated.
 
+Your response must be in the requested JSON format.
+
+Text to analyze:
+{{{text}}}
+`,
+});
 
 const checkTextOriginalityFlow = ai.defineFlow(
   {
@@ -63,39 +58,20 @@ const checkTextOriginalityFlow = ai.defineFlow(
     outputSchema: CheckTextOriginalityOutputSchema,
   },
   async input => {
-    // Sample texts for comparison.
-    const aiText1 = 'This is a sample AI-generated text. It is created by a large language model and may not be original.';
-    const aiText2 = 'Another example of text produced by AI. This content was generated programmatically.';
-    const humanText = 'This is a sample of human-written text. I wrote this myself, with my own thoughts and ideas.';
-
-    const [aiEmbedding1, aiEmbedding2, humanEmbedding, inputEmbedding] = await Promise.all([
-      embedText(aiText1),
-      embedText(aiText2),
-      embedText(humanText),
-      embedText(input.text),
-    ]);
-
-    if (!inputEmbedding || !aiEmbedding1 || !aiEmbedding2 || !humanEmbedding) {
-      console.warn("Could not generate all embeddings. Returning 0% AI score. This might be due to a missing API key.");
+    if (!input.text.trim()) {
       return { aiPercentage: 0 };
     }
 
-    const similarityToAI1 = cosineSimilarity(inputEmbedding, aiEmbedding1);
-    const similarityToAI2 = cosineSimilarity(inputEmbedding, aiEmbedding2);
-    const similarityToHuman = cosineSimilarity(inputEmbedding, humanEmbedding);
-
-    // Simple averaging of AI similarities
-    const aiSimilarity = (similarityToAI1 + similarityToAI2) / 2;
-
-    // Normalize similarities from [-1, 1] to [0, 1] to avoid issues with negative numbers.
-    const normalizedAiSimilarity = (aiSimilarity + 1) / 2;
-    const normalizedHumanSimilarity = (similarityToHuman + 1) / 2;
-    
-    let aiPercentage = 0;
-    if (normalizedAiSimilarity + normalizedHumanSimilarity > 0) {
-        aiPercentage = (normalizedAiSimilarity / (normalizedAiSimilarity + normalizedHumanSimilarity)) * 100;
+    try {
+      const { output } = await checkOriginalityPrompt(input);
+      if (!output) {
+        console.error("The AI model did not return a valid output.");
+        return { aiPercentage: 0 };
+      }
+      return output;
+    } catch (error) {
+      console.error("An error occurred while checking text originality:", error);
+      return { aiPercentage: 0 };
     }
-
-    return {aiPercentage: Math.round(aiPercentage)};
   }
 );
