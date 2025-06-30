@@ -37,12 +37,15 @@ export async function checkTextOriginality(input: CheckTextOriginalityInput): Pr
   return checkTextOriginalityFlow(input);
 }
 
-const embedText = ai.definePrompt({
-  name: 'embedText',
-  input: {schema: z.object({text: z.string()})},
-  output: {schema: z.object({embedding: z.array(z.number())})},
-  prompt: `Embed the following text: {{{text}}}`,
-});
+// This function now uses a proper embedding model.
+async function embedText(text: string): Promise<number[]> {
+  const { embedding } = await ai.embed({
+    model: 'googleai/text-embedding-004',
+    content: text,
+  });
+  return embedding;
+}
+
 
 const checkTextOriginalityFlow = ai.defineFlow(
   {
@@ -51,34 +54,38 @@ const checkTextOriginalityFlow = ai.defineFlow(
     outputSchema: CheckTextOriginalityOutputSchema,
   },
   async input => {
-    // Sample embeddings (replace with actual AI-generated text embeddings)
-    const aiText1 = 'This is a sample AI-generated text.';
-    const aiText2 = 'Another example of text produced by AI.';
-    const humanText = 'This is a sample of human-written text.';
+    // Sample texts for comparison.
+    const aiText1 = 'This is a sample AI-generated text. It is created by a large language model and may not be original.';
+    const aiText2 = 'Another example of text produced by AI. This content was generated programmatically.';
+    const humanText = 'This is a sample of human-written text. I wrote this myself, with my own thoughts and ideas.';
 
-    const [aiEmbedding1Response, aiEmbedding2Response, humanEmbeddingResponse] = await Promise.all([
-      embedText({text: aiText1}),
-      embedText({text: aiText2}),
-      embedText({text: humanText}),
+    const [aiEmbedding1, aiEmbedding2, humanEmbedding, inputEmbedding] = await Promise.all([
+      embedText(aiText1),
+      embedText(aiText2),
+      embedText(humanText),
+      embedText(input.text),
     ]);
 
-    const aiEmbedding1 = aiEmbedding1Response.output!.embedding;
-    const aiEmbedding2 = aiEmbedding2Response.output!.embedding;
-    const humanEmbedding = humanEmbeddingResponse.output!.embedding;
-
-    const inputEmbeddingResponse = await embedText({text: input.text});
-    const inputEmbedding = inputEmbeddingResponse.output!.embedding;
+    if (!inputEmbedding || !aiEmbedding1 || !aiEmbedding2 || !humanEmbedding) {
+      throw new Error('Failed to generate embeddings for comparison.');
+    }
 
     const similarityToAI1 = cosineSimilarity(inputEmbedding, aiEmbedding1);
     const similarityToAI2 = cosineSimilarity(inputEmbedding, aiEmbedding2);
     const similarityToHuman = cosineSimilarity(inputEmbedding, humanEmbedding);
 
-    // Simple averaging of AI similarities (can be adjusted based on desired sensitivity)
+    // Simple averaging of AI similarities
     const aiSimilarity = (similarityToAI1 + similarityToAI2) / 2;
 
-    // Normalize AI similarity and "invert" it to get the AI percentage
-    const aiPercentage = Math.max(0, Math.min(100, (aiSimilarity / (aiSimilarity + similarityToHuman)) * 100));
+    // Normalize similarities from [-1, 1] to [0, 1] to avoid issues with negative numbers.
+    const normalizedAiSimilarity = (aiSimilarity + 1) / 2;
+    const normalizedHumanSimilarity = (similarityToHuman + 1) / 2;
+    
+    let aiPercentage = 0;
+    if (normalizedAiSimilarity + normalizedHumanSimilarity > 0) {
+        aiPercentage = (normalizedAiSimilarity / (normalizedAiSimilarity + normalizedHumanSimilarity)) * 100;
+    }
 
-    return {aiPercentage};
+    return {aiPercentage: Math.round(aiPercentage)};
   }
 );
