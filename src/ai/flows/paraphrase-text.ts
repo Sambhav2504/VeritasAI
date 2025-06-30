@@ -29,9 +29,11 @@ const paraphraseTextPrompt = ai.definePrompt({
   name: 'paraphraseTextPrompt',
   input: {schema: ParaphraseTextInputSchema},
   output: {schema: ParaphraseTextOutputSchema},
-  prompt: `You are an expert in rewriting and paraphrasing. Your primary goal is to take the given text and rewrite it so that it passes AI detection tools and appears completely human-written. The resulting text should have a 0% AI-generated score when analyzed.
+  prompt: `You are an expert content rewriter. Your task is to paraphrase the following text to make it sound completely human-written and original, aiming for a 0% AI detection score.
 
-Rewrite the following text to make it sound natural, human, and undetectable by AI detectors. Change sentence structures, use varied vocabulary, and alter the tone to be less formal and more engaging, while preserving the original meaning.
+Rewrite the text by significantly altering sentence structures, using a wider and more natural vocabulary, and adjusting the tone to be less formal and more engaging. Ensure the core meaning of the original text is fully preserved.
+
+Your response MUST be in the requested JSON format, containing only the paraphrased text in the 'paraphrasedText' field. Do not add any extra commentary or introduction.
 
 Original text:
 {{{text}}}`,
@@ -44,7 +46,23 @@ const paraphraseTextFlow = ai.defineFlow(
     outputSchema: ParaphraseTextOutputSchema,
   },
   async input => {
-    const {output} = await paraphraseTextPrompt(input);
-    return output!;
+    if (!input.text.trim()) {
+      return { paraphrasedText: "" };
+    }
+
+    try {
+      const { output } = await paraphraseTextPrompt(input);
+      // Ensure we always return a valid object, even if the model fails.
+      // Fallback to original text to prevent clearing the user's input.
+      if (!output?.paraphrasedText) {
+        console.error("The AI model did not return a valid paraphrased text. Falling back to original text.");
+        return { paraphrasedText: input.text };
+      }
+      return output;
+    } catch (error) {
+      console.error("An error occurred during paraphrasing:", error);
+      // Fallback to original text on any error
+      return { paraphrasedText: input.text };
+    }
   }
 );
