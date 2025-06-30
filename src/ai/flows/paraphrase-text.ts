@@ -29,9 +29,13 @@ const paraphraseTextPrompt = ai.definePrompt({
   name: 'paraphraseTextPrompt',
   input: {schema: ParaphraseTextInputSchema},
   output: {schema: ParaphraseTextOutputSchema},
-  prompt: `You are an expert content rewriter. Your task is to paraphrase the following text to make it sound completely human-written and original, aiming for a 0% AI detection score.
+  prompt: `You are an expert at rewriting text to make it sound completely human. Your goal is to make the text undetectable by AI plagiarism checkers, effectively reaching a 0% AI score.
 
-Rewrite the text by significantly altering sentence structures, using a wider and more natural vocabulary, and adjusting the tone to be less formal and more engaging. Ensure the core meaning of the original text is fully preserved.
+Paraphrase the given text by following these rules:
+1.  **Simplify Vocabulary**: Replace complex or overly formal words with common, everyday language. Avoid jargon.
+2.  **Vary Sentence Structure**: Break up long sentences and combine short ones. Change the starting words of sentences.
+3.  **Inject a Human Tone**: Introduce slight imperfections, personal voice, or common conversational phrases. Make it sound like a person talking, not a machine writing.
+4.  **Preserve Core Meaning**: The essential message of the original text must not be changed.
 
 Your response MUST be in the requested JSON format, containing only the paraphrased text in the 'paraphrasedText' field. Do not add any extra commentary or introduction.
 
