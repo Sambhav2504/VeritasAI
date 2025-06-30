@@ -22,6 +22,7 @@ export function OriginalityChecker() {
   const [text, setText] = useState("")
   const [originalityScore, setOriginalityScore] = useState<number | null>(null)
   const [paraphrasedText, setParaphrasedText] = useState<string | null>(null)
+  const [originalTextForDiff, setOriginalTextForDiff] = useState<string | null>(null)
   const [isLoadingOriginality, setIsLoadingOriginality] = useState(false)
   const [isLoadingParaphrase, setIsLoadingParaphrase] = useState(false)
   const { toast } = useToast()
@@ -33,6 +34,7 @@ export function OriginalityChecker() {
     }
     setIsLoadingOriginality(true)
     setParaphrasedText(null)
+    setOriginalTextForDiff(null)
     try {
       const result = await checkTextOriginality({ text: textToCheck })
       setOriginalityScore(result.aiPercentage)
@@ -52,11 +54,16 @@ export function OriginalityChecker() {
     }
     setIsLoadingParaphrase(true)
     setOriginalityScore(null)
+    setOriginalTextForDiff(text)
     try {
       const result = await paraphraseText({ text })
-      setParaphrasedText(result.paraphrasedText)
+      const newText = result.paraphrasedText
+      
+      setText(newText)
+      setParaphrasedText(newText)
+      
       // Re-check score for the new text
-      await handleCheckOriginality(result.paraphrasedText)
+      await handleCheckOriginality(newText)
     } catch (error) {
       console.error(error)
       toast({ title: "Error", description: "Failed to paraphrase text.", variant: "destructive" })
@@ -66,8 +73,8 @@ export function OriginalityChecker() {
   }
 
   const renderDiff = () => {
-    if (!paraphrasedText) return null
-    const differences = diffWords(text, paraphrasedText)
+    if (!paraphrasedText || !originalTextForDiff) return null
+    const differences = diffWords(originalTextForDiff, paraphrasedText)
     return (
       <p className="text-base leading-relaxed">
         {differences.map((part, index) => {
@@ -150,9 +157,9 @@ export function OriginalityChecker() {
                     <p>Enter some text and click "Check Originality" to start.</p>
                 </div>
             )}
-            {paraphrasedText && (
+            {paraphrasedText && originalTextForDiff && (
               <div className="mt-8 w-full border-t pt-6">
-                <h3 className="text-xl font-headline font-semibold mb-2">Paraphrased Version</h3>
+                <h3 className="text-xl font-headline font-semibold mb-2">Paraphrased Version (showing changes)</h3>
                 {renderDiff()}
               </div>
             )}
