@@ -29,17 +29,15 @@ const paraphraseTextPrompt = ai.definePrompt({
   name: 'paraphraseTextPrompt',
   input: {schema: ParaphraseTextInputSchema},
   output: {schema: ParaphraseTextOutputSchema},
-  prompt: `You are a master of disguise for text. Your one and only mission is to rewrite the following text so that it appears 100% human-written and would receive a score of 0% from an AI detection tool.
+  prompt: `You are an expert editor who transforms robotic-sounding text into prose that is vibrant, natural, and unmistakably human. Your goal is to rewrite the given text so it would pass any AI detection test with a score of 0%.
 
-To achieve this, you must:
-- Radically alter sentence structures.
-- Substitute common words for any jargon or complex vocabulary.
-- Infuse a natural, slightly informal, and personal tone.
-- Ensure the original meaning is perfectly intact.
+To do this, focus on these key techniques:
+1.  **Vary Sentence Structure:** Mix short, direct sentences with longer, more flowing ones. Avoid repetitive sentence beginnings.
+2.  **Use a Natural Tone:** Incorporate contractions (like \`it's\`, \`don't\`, \`you're\`) and a slightly less formal vocabulary. Make it sound like a person talking.
+3.  **Simplify Language:** Replace complex or jargon-heavy words with simpler, more common alternatives.
+4.  **Maintain Core Meaning:** The essence and key information of the original text must be preserved perfectly.
 
-Do not just swap out a few words. The final text should be fundamentally different in style from the original, as if written by a completely different person.
-
-Your response MUST be in the requested JSON format, containing only the rewritten text in the 'paraphrasedText' field. Do not include any explanations or introductory phrases.
+Rewrite the following text. Your response must be in the requested JSON format, with the rewritten text in the 'paraphrasedText' field. Do not add any commentary.
 
 Original text:
 {{{text}}}`,
