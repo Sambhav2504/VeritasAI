@@ -1,3 +1,9 @@
+import { OriginalityChecker } from "@/components/originality-checker";
+
 export default function Home() {
-  return <></>;
+  return (
+    <main className="flex-grow">
+      <OriginalityChecker />
+    </main>
+  );
 }
