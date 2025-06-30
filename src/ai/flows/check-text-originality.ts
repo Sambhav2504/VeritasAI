@@ -38,12 +38,21 @@ export async function checkTextOriginality(input: CheckTextOriginalityInput): Pr
 }
 
 // This function now uses a proper embedding model.
-async function embedText(text: string): Promise<number[]> {
-  const { embedding } = await ai.embed({
-    model: 'googleai/text-embedding-004',
-    content: text,
-  });
-  return embedding;
+async function embedText(text: string): Promise<number[] | null> {
+  try {
+    const result = await ai.embed({
+      model: 'googleai/text-embedding-004',
+      content: text,
+    });
+    if (!result?.embedding) {
+      console.error('Failed to get embedding for text. This can be caused by a missing API key or a service issue.');
+      return null;
+    }
+    return result.embedding;
+  } catch (e) {
+    console.error("Error during embedding:", e);
+    return null;
+  }
 }
 
 
@@ -67,7 +76,8 @@ const checkTextOriginalityFlow = ai.defineFlow(
     ]);
 
     if (!inputEmbedding || !aiEmbedding1 || !aiEmbedding2 || !humanEmbedding) {
-      throw new Error('Failed to generate embeddings for comparison.');
+      console.warn("Could not generate all embeddings. Returning 0% AI score. This might be due to a missing API key.");
+      return { aiPercentage: 0 };
     }
 
     const similarityToAI1 = cosineSimilarity(inputEmbedding, aiEmbedding1);
